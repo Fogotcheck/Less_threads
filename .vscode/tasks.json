@@ -1,0 +1,68 @@
+{
+    "tasks": [
+        {
+            "label": "clean",
+            "type": "shell",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "command": "make",
+            "args": [
+                "clean"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "build all",
+            "type": "shell",
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "command": "make",
+            "args": [
+                "all"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "type": "cppbuild",
+            "label": "DebugBuild_GCC",
+            "command": "c:\\All_program_set\\msys2\\mingw64\\bin\\gcc.exe",
+            "args": [
+                "-fdiagnostics-color=always",
+                "-Wall",
+                "-Wextra",
+                "-Wshadow",
+                "-Wpointer-arith",
+                "-Wbad-function-cast",
+                "-Wcast-align",
+                "-Wsign-compare",
+                "-Waggregate-return",
+                "-Wstrict-prototypes",
+                "-Wmissing-prototypes",
+                "-Wmissing-declarations",
+                "-Wunused",
+                "-g",
+                "-lpthread",
+                "${file}",
+                "-o",
+                "${fileDirname}\\build\\${fileBasenameNoExtension}.exe",
+                "${fileDirname}\\Include\\*.c"
+            ],
+            "options": {
+                "cwd": "${fileDirname}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": false
+            },
+            "detail": "do't create lss,sym"
+        }
+    ],
+    "version": "2.0.0"
+}

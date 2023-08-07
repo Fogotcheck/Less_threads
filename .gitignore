@@ -1,0 +1,4 @@
+build/main.exe
+tmp/main.o
+tmp/queue.o
+tmp/testThread.o
