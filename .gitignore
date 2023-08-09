@@ -5,3 +5,8 @@ tmp/testThread.o
 build/Threads.exe
 build/Threads.lss
 build/Threads.sym
+build/Threads.exe
+build/Threads.exe
+build/Threads.lss
+build/Threads.sym
+tmp/serial.o
