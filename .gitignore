@@ -10,3 +10,6 @@ build/Threads.exe
 build/Threads.lss
 build/Threads.sym
 tmp/serial.o
+build/Threads.exe
+build/Threads.lss
+build/Threads.sym
