@@ -8,10 +8,14 @@ int requestForRead(uint8_t *buf, size_t bufSize, OVERLAPPED *osReader);
 int requestForWrite(uint8_t *buf, size_t messSize, OVERLAPPED *osWrite);
 void toggleSerialState(int *serialState);
 
-void serialRXHandler(void *mess, size_t messSize);
-void serialTXHandler(void *mess, size_t messSize);
+void serialRXHandler(void **mess, size_t messSize);
+void serialTXHandler(void **mess, size_t messSize);
+int serialClose(void);
 
 serialParam_t *param;
+
+uint8_t *rxBuf;
+uint8_t *txBuf;
 
 int openAndSettingSerial(void)
 {
@@ -31,7 +35,17 @@ int openAndSettingSerial(void)
     {
         param->rxHandler = serialRXHandler;
     }
+    if (param->txHandler == NULL)
+    {
+        param->txHandler = serialTXHandler;
+    }
+    if (param->seraialClose == NULL)
+    {
+        param->seraialClose = serialClose;
+    }
 
+    rxBuf = (uint8_t *)malloc(RX_TX_BUF_SIZE);
+    txBuf = (uint8_t *)malloc(RX_TX_BUF_SIZE);
     return 0;
 }
 
@@ -55,7 +69,7 @@ int requestForRead(uint8_t *buf, size_t bufSize, OVERLAPPED *osReader)
     {
         if (dwRead)
         {
-            param->rxHandler(buf, dwRead);
+            param->rxHandler((void **)&buf, dwRead);
         }
         memset(buf, 0, bufSize);
     }
@@ -79,7 +93,7 @@ int waitAnswerRequestRead(uint8_t *buf, size_t bufSize, OVERLAPPED *osReader)
         { // Read completed successfully.
             if (dwRead)
             {
-                param->rxHandler(buf, dwRead);
+                param->rxHandler((void **)&buf, dwRead);
             }
             memset(buf, 0, bufSize);
         } //  Reset flag so that another opertion can be issued.
@@ -98,6 +112,7 @@ int waitAnswerRequestRead(uint8_t *buf, size_t bufSize, OVERLAPPED *osReader)
         serialErrorsHandler((void *)__func__);
         break;
     }
+
     return fWaitingOnRead;
 }
 
@@ -130,7 +145,10 @@ int requestForWrite(uint8_t *buf, size_t messSize, OVERLAPPED *osWrite)
                 fRes = SERIAL_WRITE_REQUEST;
             }
             else
-            { // Write operation completed successfully.
+            {
+                strcat((char *)txBuf, " Write operation completed successfully.\n\0");
+                param->txHandler((void **)&txBuf, strlen((char*)txBuf));
+                memset(txBuf, 0, RX_TX_BUF_SIZE);
                 fRes = SERIAL_DEFAULT;
             }
             break;
@@ -146,7 +164,10 @@ int requestForWrite(uint8_t *buf, size_t messSize, OVERLAPPED *osWrite)
         }
     }
     else
-    { // WriteFile completed immediately.
+    {
+        strcat((char *)txBuf, " WriteFile completed immediately..\n\0");
+        param->txHandler((void **)&txBuf, strlen((char*)txBuf));
+        memset(txBuf, 0, RX_TX_BUF_SIZE);
         fRes = SERIAL_DEFAULT;
     }
     return fRes;
@@ -199,17 +220,17 @@ void *SerialThread(void *args)
         {
         case SERIAL_READ_REQUEST:
         {
-            serialState = requestForRead(param->bufRX, param->bufRXSize, &osReader);
+            serialState = requestForRead(rxBuf, RX_TX_BUF_SIZE, &osReader);
             break;
         }
         case SERIAL_WAIT_ANSWER_READ:
         {
-            serialState = waitAnswerRequestRead(param->bufRX, param->bufRXSize, &osReader);
+            serialState = waitAnswerRequestRead(rxBuf, RX_TX_BUF_SIZE, &osReader);
             break;
         }
         case SERIAL_WRITE_REQUEST:
         {
-            serialState = requestForWrite(param->bufRX, param->bufRXSize, &osWrite);
+            serialState = requestForWrite(txBuf, RX_TX_BUF_SIZE, &osWrite);
             break;
         }
         case SERIAL_FREE:
@@ -223,7 +244,15 @@ void *SerialThread(void *args)
             break;
         }
         }
+        if ((serialState == SERIAL_DEFAULT) &&
+            (param->seraialClose()))
+        {
+            serialErrorsHandler("serial close Handel::OK\n");
+            break;
+        }
     }
+    free(rxBuf);
+    free(txBuf);
     CloseHandle(osWrite.hEvent);
     CloseHandle(osReader.hEvent);
     CloseHandle(hComm);
@@ -236,7 +265,21 @@ __attribute__((weak)) void serialErrorsHandler(void *err)
     fprintf(stderr, "Err func::%s\n", (char *)err);
 }
 
-__attribute__((weak)) void serialRXHandler(void *mess, size_t messSize)
+__attribute__((weak)) void serialRXHandler(void **mess, size_t messSize)
 {
-    fprintf(stderr, "mess size::%llu\nmess::%s\n", messSize, (char *)mess);
+    char *tmp = (char *)(*mess);
+    fprintf(stderr, "mess size::%llu\nmess::%s\n", messSize, tmp);
+}
+
+__attribute__((weak)) void serialTXHandler(void **mess, size_t messSize)
+{
+    char *tmp = (char *)(*mess);
+    fprintf(stderr, "mess size::%llu\nmess::%s\n", messSize, tmp);
+}
+
+__attribute__((weak)) int serialClose(void)
+{
+    static uint8_t status = 100;
+    status--;
+    return status > 0 ? 0 : 1;
 }

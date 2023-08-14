@@ -5,12 +5,11 @@ int main(void)
 {
     int ret = 0;
     serialParam_t comPortParam;
-    comPortParam.bufRX = buf;
-    comPortParam.bufRXSize = sizeof(buf);
+
     comPortParam.portName = comPortName;
-    comPortParam.bufTX = buf;
-    comPortParam.bufTXSize = sizeof(buf);
+    comPortParam.txHandler = NULL;
     comPortParam.rxHandler = NULL;
+    comPortParam.seraialClose = NULL;
     pthread_t thSerialID;
     pthread_attr_t thSerialAtt;
     pthread_attr_init(&thSerialAtt);
