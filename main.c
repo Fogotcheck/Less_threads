@@ -1,63 +1,39 @@
 #include "include/headers/main.h"
-uint8_t buf[1024];
-char comPortName[] = "\\\\.\\COM24";
-
-queueHandel_t *printQueue = NULL, *serialQueue = NULL;
-
-void sendToWrite(void **mess, size_t *sizeMess);
 
 int main(void)
 {
     int ret = 0;
-    initQueueManagement(3);
-    char testMess[] = "hello from main\n\0";
-    size_t testMessSize = strlen(testMess) + 2;
-    // size_t sizePrint = 0, sizeSerialRX = 0, sizeSerialTX = 0;
-
-    createQueue(&serialQueue, (void *)testMess, &testMessSize);
-    createQueue(&printQueue, (void *)testMess, &testMessSize);
-
-    serialParam_t comPortParam;
-    comPortParam.portName = comPortName;
-    comPortParam.txHandler = sendToWrite;
-    comPortParam.rxHandler = NULL;
-    comPortParam.seraialClose = NULL;
-
-    pthread_t thSerialID, thPrintID;
-    pthread_attr_t thSerialAtt, thPrintAtt;
-    pthread_attr_init(&thSerialAtt);
-    pthread_attr_init(&thPrintAtt);
-
-    pthread_create(&thSerialID, &thSerialAtt, SerialThread, &comPortParam);
-    pthread_create(&thPrintID, &thPrintAtt, printThread, (void *)serialQueue);
-    char myExit = 0;
-
-    while (1)
+    pthread_t thID[4];
+    pthread_attr_t att;
+    pthread_attr_init(&att);
+    struct sched_param param;
+    param.sched_priority = 0;
+    for (size_t i = 0; i < 4; i++)
     {
-        scanf("%c", &myExit);
-        if (myExit == 'y')
+        size_t *ptr = (size_t *)malloc(sizeof(size_t));
+        *ptr = i;
+        /*хз - тоже сомое что и просто att.param.sched_priority++
+        возвращает тоже самое, нет возможности установить больше MAX, 
+        но приоритеты не устанавливают порядок threads*/
+        // pthread_attr_setschedparam(&att, &param);
+        // param.sched_priority++;
+        // printf("att:%d\n", att.param.sched_priority);
+        ret = pthread_create(&thID[i], &att, printThread, ptr);
+        if (ret != 0)
         {
-            ret = pthread_cancel(thSerialID);
-            if (ret == 0)
-            {
-                ret = pthread_cancel(thPrintID);
-                if (ret == 0)
-                {
-                    break;
-                }
-            }
+            printf("th::%llu-Err\n", i);
         }
-        addItemQueue(&printQueue, testMess, &testMessSize);
     }
-    delAllQueueHandels();
-    ret = pthread_join(thSerialID, NULL);
+    int *tmp = NULL;
+    for (size_t i = 0; i < 4; i++)
+    {
+        ret = pthread_join(thID[i], (void **)&tmp);
+        if (ret != 0)
+        {
+            printf("th::%llu-Err::%d\n", i, ret);
+        }
+    }
+
     printf("Hello world\n");
     return 0;
-}
-
-void sendToWrite(void **mess, size_t *sizeMess)
-{
-    char *tmp = (char *)*mess;
-    printf("mess::%s\nsize::%lld", tmp, *sizeMess);
-    addItemQueue(&serialQueue, (void *)*mess, sizeMess);
 }
