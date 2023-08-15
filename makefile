@@ -14,6 +14,8 @@ CFLAGS += -std=c11 $(WARNINGS) $(THREAD)
 ASFLAGS = -Wall -g
 LDFLAGS = -Wl,-rpath=$(BUILD_DIR) $(INCLUDES)
 
+CC = gcc
+
 SRC = $(wildcard *.c) \
 $(wildcard $(INCLUDES_DIR)/*.c)
 
