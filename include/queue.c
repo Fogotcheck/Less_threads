@@ -53,7 +53,7 @@ void addNewQueue(queueHandel_t **xQueueHandel)
     (*xQueueHandel)->head = NULL;
 }
 
-void createQueue(queueHandel_t **xQueueHandel, void *data, size_t size)
+void createQueue(queueHandel_t **xQueueHandel, void *data, size_t *size)
 {
 
     if ((*xQueueHandel) == NULL)
@@ -63,10 +63,10 @@ void createQueue(queueHandel_t **xQueueHandel, void *data, size_t size)
 
     queue_t *newItem = (queue_t *)malloc(sizeof(queue_t));
     newItem->prev = NULL;
-    newItem->data = (void *)malloc(size + 1);
-    newItem->size = size;
-    memset(newItem->data, 0, (size + 1));
-    memcpy(newItem->data, data, size);
+    newItem->data = (void *)malloc(*size + 1);
+    newItem->size = *size;
+    memset(newItem->data, 0, (newItem->size + 1));
+    memcpy(newItem->data, data, newItem->size);
     (*xQueueHandel)->countItem++;
     newItem->next = (*xQueueHandel)->head;
     (*xQueueHandel)->head = newItem;
@@ -97,8 +97,9 @@ queue_t *findLastItem(queue_t *head)
     return last;
 }
 
-void addItemQueue(queueHandel_t **xQueueHandel, void *data, size_t size)
+void addItemQueue(queueHandel_t **xQueueHandel, void *data, size_t *size)
 {
+    //printAllQueueHandels();
     if (((*xQueueHandel) == NULL) || (*xQueueHandel)->head == NULL)
     {
         createQueue(xQueueHandel, data, size);
@@ -107,10 +108,10 @@ void addItemQueue(queueHandel_t **xQueueHandel, void *data, size_t size)
     (*xQueueHandel)->countItem++;
     queue_t *newItem = (queue_t *)malloc(sizeof(queue_t));
     queue_t *last = findLastItem((*xQueueHandel)->head);
-    newItem->size = size;
-    newItem->data = (void *)malloc(size + 1);
-    memset(newItem->data, 0, size + 1);
-    memcpy(newItem->data, data, size);
+    newItem->size = *size;
+    newItem->data = (void *)malloc(newItem->size);
+    memset(newItem->data, 0, (newItem->size + 1));
+    memcpy(newItem->data, data, newItem->size);
     last->next = newItem;
     newItem->next = NULL;
     newItem->prev = last;

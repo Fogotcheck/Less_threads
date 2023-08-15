@@ -28,9 +28,9 @@ typedef struct queueHandel
 /**/
 void initQueueManagement(size_t countQueue);
 /*FILO*/
-void createQueue(queueHandel_t **xQueueHandel, void *data, size_t size);
+void createQueue(queueHandel_t **xQueueHandel, void *data, size_t *size);
 /*FIFO*/
-void addItemQueue(queueHandel_t **xQueueHandel, void *data, size_t size);
+void addItemQueue(queueHandel_t **xQueueHandel, void *data, size_t *size);
 /*get item and del head*/
 void getItemQueue(queueHandel_t *xQueueHandel, void **data, size_t *size);
 void delAllQueueHandels(void);

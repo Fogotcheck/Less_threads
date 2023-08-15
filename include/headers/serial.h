@@ -9,16 +9,16 @@
 #include <pthread.h>
 
 
-typedef void (*funcHandler)(void *mess, size_t messSize);
+#define RX_TX_BUF_SIZE 1024
 
+typedef void (*funcHandler)(void **mess, size_t *messSize);
+typedef int (*funcCloseSerial)(void);
 typedef struct serialParam
 {
     char *portName;
-    uint8_t *bufRX;
-    size_t bufRXSize;
-    uint8_t *bufTX;
-    size_t bufTXSize;
+    funcHandler txHandler;
     funcHandler rxHandler;
+    funcCloseSerial seraialClose;
 } serialParam_t;
 
 enum STATE_SERIAL_THREAD
