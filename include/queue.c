@@ -1,89 +1,104 @@
 #include "headers/queue.h"
 
 /*internal functions--------------------*/
+int checkQueueHandelInMain(queueHandel_t *itemQhandel);
+void delAllQueueItems(queue_t **head);
+void addQueueItem(queue_t **head, void *data, size_t dataSize);
+
+void getQueueItem(queue_t **head, void **data, size_t *dataSize);
+queue_t *findPrevItem(queue_t *head, queue_t *item);
 queue_t *findLastItem(queue_t *head);
-void addNewQueue(queueHandel_t **xQueueHandel);
-void delAllList(queue_t **head);
 /*end internal functions--------------------*/
-queueHandel_t *arrayQueueHandels = NULL;
 
-size_t currentSize = 0;
-void initQueueManagement(size_t countQueue)
+queueHandel_t *mainQueueHandelList = NULL;
+
+void AddQueueHandel(queueHandel_t **qHandel)
 {
-
-    if (countQueue)
-    {
-        currentSize = sizeof(queueHandel_t) * countQueue;
-    }
-    else
-    {
-        countQueue = START_SIZE_QUEUE_HANDELS;
-    }
-    currentSize = sizeof(queueHandel_t) * countQueue;
-    arrayQueueHandels = (queueHandel_t *)malloc(currentSize);
-    memset(arrayQueueHandels, 0, currentSize);
-    currentSize = countQueue;
+    queueHandel_t *newItem = (queueHandel_t *)malloc(sizeof(queueHandel_t));
+    newItem->handelID = (size_t)newItem;
+    newItem->head = NULL;
+    newItem->tail = NULL;
+    newItem->countItem = 0;
+    newItem->totalSizeMem = 0;
+    pthread_mutex_init(&newItem->mutex, NULL);
+    newItem->next = mainQueueHandelList;
+    *qHandel = newItem;
+    mainQueueHandelList = newItem;
 }
 
-void addNewQueue(queueHandel_t **xQueueHandel)
+void delAllQueueHandels(void)
 {
-    size_t count = 0;
-    while (count < currentSize)
+    if (mainQueueHandelList == NULL)
     {
-        if (arrayQueueHandels[count].countId == 0)
+        return;
+    }
+    queueHandel_t *prev = NULL;
+    while (mainQueueHandelList->next)
+    {
+        prev = mainQueueHandelList;
+        mainQueueHandelList = mainQueueHandelList->next;
+        //        printf("del::%p\n", prev);
+        delAllQueueItems(&prev->head);
+        free(prev);
+    }
+    delAllQueueItems(&mainQueueHandelList->head);
+    free(mainQueueHandelList);
+    //    printf("del::%p\n", mainQueueHandelList);
+    mainQueueHandelList = NULL;
+}
+
+int checkQueueHandelInMain(queueHandel_t *itemQhandel)
+{
+    queueHandel_t *head = mainQueueHandelList;
+    while (head)
+    {
+        if (head == itemQhandel)
         {
             break;
         }
-        count++;
+        head = head->next;
     }
-    if (count >= currentSize)
-    {
-        MOD_NAME
-        printf("Error\n");
-        /*TODO:: remake this after realoc
-        address::arrayQueueHandels[0]... will change
-        arrayQueueHandels = (queueHandel_t *)realloc(arrayQueueHandels, (sizeof(queueHandel_t) * currentSize + sizeof(queueHandel_t) * START_SIZE_QUEUE_HANDELS));
-        queueHandel_t *tmp = &arrayQueueHandels[count];
-        memset(tmp, 0, sizeof(queueHandel_t) * START_SIZE_QUEUE_HANDELS);
-        currentSize += START_SIZE_QUEUE_HANDELS;
-        */
-    }
-    *xQueueHandel = &arrayQueueHandels[count];
-    (*xQueueHandel)->countId = (size_t)&arrayQueueHandels[count];
-    (*xQueueHandel)->head = NULL;
+    return head == NULL ? 0 : 1;
 }
 
-void createQueue(queueHandel_t **xQueueHandel, void *data, size_t *size)
+void delItemQueueHandel(queueHandel_t **itemQhandel)
 {
-
-    if ((*xQueueHandel) == NULL)
+    queueHandel_t *head = mainQueueHandelList, *tmp = NULL;
+    if (checkQueueHandelInMain(*itemQhandel))
     {
-        addNewQueue(xQueueHandel);
-    }
-
-    queue_t *newItem = (queue_t *)malloc(sizeof(queue_t));
-    newItem->prev = NULL;
-    newItem->data = (void *)malloc(*size + 1);
-    newItem->size = *size;
-    memset(newItem->data, 0, (newItem->size + 1));
-    memcpy(newItem->data, data, newItem->size);
-    (*xQueueHandel)->countItem++;
-    newItem->next = (*xQueueHandel)->head;
-    (*xQueueHandel)->head = newItem;
-}
-
-void delAllList(queue_t **head)
-{
-    queue_t *tmp = NULL;
-    while ((*head)->next)
-    {
-        tmp = (*head);
-        (*head) = (*head)->next;
-        free(tmp->data);
+        if (head == (*itemQhandel))
+        {
+            tmp = head;
+            head = head->next;
+            mainQueueHandelList = head;
+        }
+        else
+        {
+            while (head)
+            {
+                if (head->next == (*itemQhandel))
+                {
+                    tmp = (*itemQhandel);
+                    head->next = (*itemQhandel)->next;
+                    break;
+                }
+                head = head->next;
+            }
+        }
+        delAllQueueItems(&tmp->head);
         free(tmp);
     }
-    free((*head)->data);
-    free((*head));
+    *itemQhandel = NULL;
+}
+
+void addQueueItem(queue_t **head, void *data, size_t dataSize)
+{
+    queue_t *newItem = (queue_t *)malloc(sizeof(queue_t));
+    newItem->data = data;
+    newItem->size = dataSize;
+    newItem->next = (*head);
+    *head = newItem;
+    // printf("in queue::%p\t%p\n", newItem, newItem->data);
 }
 
 queue_t *findLastItem(queue_t *head)
@@ -97,75 +112,104 @@ queue_t *findLastItem(queue_t *head)
     return last;
 }
 
-void addItemQueue(queueHandel_t **xQueueHandel, void *data, size_t *size)
+queue_t *findPrevItem(queue_t *head, queue_t *item)
 {
-    //printAllQueueHandels();
-    if (((*xQueueHandel) == NULL) || (*xQueueHandel)->head == NULL)
+    queue_t *prev = head;
+    while (head->next)
     {
-        createQueue(xQueueHandel, data, size);
-        return;
+        if (head == item)
+        {
+            break;
+        }
+        prev = head;
+        head = head->next;
     }
-    (*xQueueHandel)->countItem++;
-    queue_t *newItem = (queue_t *)malloc(sizeof(queue_t));
-    queue_t *last = findLastItem((*xQueueHandel)->head);
-    newItem->size = *size;
-    newItem->data = (void *)malloc(newItem->size);
-    memset(newItem->data, 0, (newItem->size + 1));
-    memcpy(newItem->data, data, newItem->size);
-    last->next = newItem;
-    newItem->next = NULL;
-    newItem->prev = last;
+    return prev;
 }
 
-void getItemQueue(queueHandel_t *xQueueHandel, void **data, size_t *size)
+void getQueueItem(queue_t **head, void **data, size_t *dataSize)
 {
-    if ((xQueueHandel->head) == NULL)
+    if ((*head) == NULL)
     {
         *data = NULL;
-        *size = 0;
+        *dataSize = 0;
         return;
     }
-    queue_t *tmp = (xQueueHandel->head);
-
+    queue_t *tmp = NULL;
+    queue_t *prev = NULL;
+    queue_t *last = findLastItem((*head));
+    if ((*head)->next == NULL)
+    {
+        tmp = (*head);
+        *head = NULL;
+    }
+    else
+    {
+        prev = findPrevItem((*head), last);
+        prev->next = NULL;
+        tmp = last;
+    }
     memcpy((*data), tmp->data, tmp->size);
-    *size = tmp->size;
-    xQueueHandel->head = (xQueueHandel->head)->next;
-    xQueueHandel->countItem--;
-    free(tmp->data);
+    if (tmp->data)
+    {
+        free(tmp->data);
+    }
     free(tmp);
 }
 
-void printAllQueueHandels(void)
+void delAllQueueItems(queue_t **head)
 {
-    for (size_t i = 0; i < currentSize; i++)
+    if ((*head) == NULL)
     {
-        printf("arr[%lld]::%p\thead::%p\tcountItem::%llu\tid::0x%llx\n",
-               i, &arrayQueueHandels[i],
-               arrayQueueHandels[i].head,
-               arrayQueueHandels[i].countItem,
-               arrayQueueHandels[i].countId);
-
-        if (arrayQueueHandels[i].head)
-        {
-            queue_t *tmp = arrayQueueHandels[i].head;
-            while (tmp)
-            {
-                printf("data::%s\tsize::%llu\n", (char *)tmp->data, tmp->size);
-                tmp = tmp->next;
-            }
-        }
+        return;
     }
+    queue_t *prev = NULL;
+    while ((*head)->next)
+    {
+        prev = (*head);
+        (*head) = (*head)->next;
+        if (prev->data != NULL)
+        {
+            // printf("del data::0x%p\t0x%p\n", prev, prev->data);
+            free(prev->data);
+        }
+        free(prev);
+    }
+    if ((*head)->data != NULL)
+    {
+        // printf("del data::0x%p\t0x%p\n", (*head), (*head)->data);
+        free((*head)->data);
+    }
+    free(*head);
 }
 
-void delAllQueueHandels(void)
+void sendQueue(queueHandel_t *qHandel, void *data, size_t dataSize)
 {
-
-    for (size_t i = 0; i < currentSize; i++)
+    if (qHandel == NULL)
     {
-        if (arrayQueueHandels[i].head != NULL)
-        {
-            delAllList(&arrayQueueHandels[i].head);
-        }
+        return;
     }
-    free(arrayQueueHandels);
+    pthread_mutex_lock(&qHandel->mutex);
+    void *tmp = malloc(dataSize);
+    memcpy(tmp, data, dataSize);
+    addQueueItem(&qHandel->head, tmp, dataSize);
+    qHandel->countItem++;
+    qHandel->totalSizeMem += dataSize;
+    pthread_mutex_unlock(&qHandel->mutex);
+}
+
+void receivQueue(queueHandel_t *qHandel, void **dataNull, size_t *dataSize)
+{
+    if (qHandel == NULL)
+    {
+        return;
+    }
+    pthread_mutex_lock(&qHandel->mutex);
+    getQueueItem(&qHandel->head, dataNull, dataSize);
+    if (*dataNull != NULL)
+    {
+        qHandel->countItem--;
+        qHandel->totalSizeMem -= *dataSize;
+    }
+    pthread_mutex_unlock(&qHandel->mutex);
 }

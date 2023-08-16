@@ -2,42 +2,55 @@
 
 int main(void)
 {
-    int ret = 0;
-    pthread_t thID[4];
+    // int ret = 0;
+    queueHandel_t *q[4];
+    for (size_t i = 0; i < 4; i++)
+    {
+        q[i] = NULL;
+        AddQueueHandel(&q[i]);
+        printf("q[%llu]::%p\n", i, q[i]);
+    }
+    char tq_1[] = "tq_1 hello main";
+    char tq_2[] = "tq_2 hello main";
+    char tq_3[] = "tq_3 hello main";
+    char tq_4[] = "tq_4 hello main";
+    for (size_t i = 0; i < 4; i++)
+    {
+        sendQueue(q[i], tq_1, sizeof(tq_1));
+        sendQueue(q[i], tq_2, sizeof(tq_2));
+        sendQueue(q[i], tq_3, sizeof(tq_3));
+        sendQueue(q[i], tq_4, sizeof(tq_4));
+    }
+    pthread_t id[3];
     pthread_attr_t att;
     pthread_attr_init(&att);
-    // struct sched_param param;
-    // param.sched_priority = 0;
+    for (size_t i = 0; i < 2; i++)
+    {
+        pthread_create(&id[i], &att, sendThread, q);
+    }
+    pthread_create(&id[2], &att, recievThread, q);
+    uint8_t *data = (uint8_t *)malloc(1024);
 
+    size_t dataSize = 0;
     for (size_t i = 0; i < 4; i++)
     {
-        size_t *ptr = (size_t *)malloc(sizeof(size_t));
-        *ptr = i;
-        /*хз - тоже сомое что и просто att.param.sched_priority++
-        возвращает тоже самое, нет возможности установить больше MAX,
-        но приоритеты не устанавливают порядок threads*/
-        // pthread_attr_setschedparam(&att, &param);
-        // param.sched_priority++;
-        // printf("att:%d\n", att.param.sched_priority);
-        ret = pthread_create(&thID[i], &att, printThread, ptr);
-        if (ret != 0)
+        uint8_t *tmp = data;
+        while (tmp)
         {
-            printf("th::%llu-Err\n", i);
+            receivQueue(q[i], (void **)&tmp, &dataSize);
+            if (tmp)
+            {
+                printf("data[%llu]::%s\n", i, data);
+            }
         }
     }
-
-    for (size_t i = 0; i < 4; i++)
-    {
-        size_t *tmp = NULL; //(size_t *)malloc(sizeof(size_t));
-        ret = pthread_join(thID[i], (void **)&tmp);
-        printf("add:%p\tval::%llu\n", tmp, *tmp);
-        if (ret != 0)
-        {
-            printf("th::%llu-Err::%d\n", i, ret);
-        }
-        free(tmp);
-    }
-
+    free(data);
+    // printf("q1::0x%p\nq2::0x%p\nq3::0x%p\nq4::0x%p\n", q_1, q_2, q_3, q_4);
+    //    delItemQueueHandel(&q_1);
+    // printf("q1::0x%p\nq2::0x%p\nq3::0x%p\nq4::0x%p\n", q_1, q_2, q_3, q_4);
+    delAllQueueHandels();
+    // pthread_t thID[4];
+    // pthread_attr_t att;
     printf("Hello world\n");
     return 0;
 }
