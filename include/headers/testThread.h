@@ -11,5 +11,6 @@ typedef struct printItem
 } printItem_t;
 
 #include "queue.h"
-void *printThread(void *args);
+void *sendThread(void *args);
+void *recievThread(void *args);
 #endif //__TETS_THREAD_H__

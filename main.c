@@ -1,63 +1,56 @@
 #include "include/headers/main.h"
-uint8_t buf[1024];
-char comPortName[] = "\\\\.\\COM24";
-
-queueHandel_t *printQueue = NULL, *serialQueue = NULL;
-
-void sendToWrite(void **mess, size_t *sizeMess);
 
 int main(void)
 {
-    int ret = 0;
-    initQueueManagement(3);
-    char testMess[] = "hello from main\n\0";
-    size_t testMessSize = strlen(testMess) + 2;
-    // size_t sizePrint = 0, sizeSerialRX = 0, sizeSerialTX = 0;
-
-    createQueue(&serialQueue, (void *)testMess, &testMessSize);
-    createQueue(&printQueue, (void *)testMess, &testMessSize);
-
-    serialParam_t comPortParam;
-    comPortParam.portName = comPortName;
-    comPortParam.txHandler = sendToWrite;
-    comPortParam.rxHandler = NULL;
-    comPortParam.seraialClose = NULL;
-
-    pthread_t thSerialID, thPrintID;
-    pthread_attr_t thSerialAtt, thPrintAtt;
-    pthread_attr_init(&thSerialAtt);
-    pthread_attr_init(&thPrintAtt);
-
-    pthread_create(&thSerialID, &thSerialAtt, SerialThread, &comPortParam);
-    pthread_create(&thPrintID, &thPrintAtt, printThread, (void *)serialQueue);
-    char myExit = 0;
-
-    while (1)
+    // int ret = 0;
+    queueHandel_t *q[4];
+    for (size_t i = 0; i < 4; i++)
     {
-        scanf("%c", &myExit);
-        if (myExit == 'y')
+        q[i] = NULL;
+        AddQueueHandel(&q[i]);
+        printf("q[%llu]::%p\n", i, q[i]);
+    }
+    char tq_1[] = "tq_1 hello main";
+    char tq_2[] = "tq_2 hello main";
+    char tq_3[] = "tq_3 hello main";
+    char tq_4[] = "tq_4 hello main";
+    for (size_t i = 0; i < 4; i++)
+    {
+        sendQueue(q[i], tq_1, sizeof(tq_1));
+        sendQueue(q[i], tq_2, sizeof(tq_2));
+        sendQueue(q[i], tq_3, sizeof(tq_3));
+        sendQueue(q[i], tq_4, sizeof(tq_4));
+    }
+    pthread_t id[3];
+    pthread_attr_t att;
+    pthread_attr_init(&att);
+    for (size_t i = 0; i < 2; i++)
+    {
+        pthread_create(&id[i], &att, sendThread, q);
+    }
+    pthread_create(&id[2], &att, recievThread, q);
+    uint8_t *data = (uint8_t *)malloc(1024);
+
+    size_t dataSize = 0;
+    for (size_t i = 0; i < 4; i++)
+    {
+        uint8_t *tmp = data;
+        while (tmp)
         {
-            ret = pthread_cancel(thSerialID);
-            if (ret == 0)
+            receivQueue(q[i], (void **)&tmp, &dataSize);
+            if (tmp)
             {
-                ret = pthread_cancel(thPrintID);
-                if (ret == 0)
-                {
-                    break;
-                }
+                printf("data[%llu]::%s\n", i, data);
             }
         }
-        addItemQueue(&printQueue, testMess, &testMessSize);
     }
+    free(data);
+    // printf("q1::0x%p\nq2::0x%p\nq3::0x%p\nq4::0x%p\n", q_1, q_2, q_3, q_4);
+    //    delItemQueueHandel(&q_1);
+    // printf("q1::0x%p\nq2::0x%p\nq3::0x%p\nq4::0x%p\n", q_1, q_2, q_3, q_4);
     delAllQueueHandels();
-    ret = pthread_join(thSerialID, NULL);
+    // pthread_t thID[4];
+    // pthread_attr_t att;
     printf("Hello world\n");
     return 0;
-}
-
-void sendToWrite(void **mess, size_t *sizeMess)
-{
-    char *tmp = (char *)*mess;
-    printf("mess::%s\nsize::%lld", tmp, *sizeMess);
-    addItemQueue(&serialQueue, (void *)*mess, sizeMess);
 }
