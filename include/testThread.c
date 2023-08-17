@@ -60,7 +60,7 @@ void *recievThread(void *args)
     return NULL;
 }
 
-void *countThread(void *args)
+void *countThread(__attribute__((__unused__)) void *args)
 {
     DWORD curTick = 0, prevTick = 0;
     args = NULL;
