@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <pthread.h>
+#include <windows.h>
 
 typedef struct printItem
 {
@@ -13,4 +14,5 @@ typedef struct printItem
 #include "queue.h"
 void *sendThread(void *args);
 void *recievThread(void *args);
+void *countThread(void *args);
 #endif //__TETS_THREAD_H__

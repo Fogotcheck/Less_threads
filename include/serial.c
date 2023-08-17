@@ -5,7 +5,7 @@ HANDLE hComm;
 int openAndSettingSerial(void);
 int waitAnswerRequestRead(uint8_t *buf, size_t bufSize, OVERLAPPED *osReader);
 int requestForRead(uint8_t *buf, size_t bufSize, OVERLAPPED *osReader);
-int requestForWrite(uint8_t *buf, size_t messSize, OVERLAPPED *osWrite);
+int requestForWriteAndWait(uint8_t *buf, size_t messSize, OVERLAPPED *osWrite);
 void toggleSerialState(int *serialState);
 
 void serialRXHandler(void **mess, size_t *messSize);
@@ -17,8 +17,13 @@ serialParam_t *param;
 uint8_t *rxBuf;
 uint8_t *txBuf;
 
+/*!
+Функция открывает serial port, и выделяет память для буферов.
+\return NULL при успешном открытии порта
+*/
 int openAndSettingSerial(void)
 {
+    // TODO: добавить настройку скорости порта.
     hComm = CreateFile(param->portName,
                        GENERIC_READ | GENERIC_WRITE,
                        0,
@@ -48,17 +53,21 @@ int openAndSettingSerial(void)
     txBuf = (uint8_t *)malloc(RX_TX_BUF_SIZE);
     return 0;
 }
-
+/*!
+Функция отправляет запрос на чтение данных.
+\param[out] buf буфер для получения считанных данных;
+\param[in] bufSize размер буфера для полученных данных;
+\param[in] osReader структура с параметрами настроенного события win OVERLAPPED;
+\return статус о необходимости ожидания данных;
+*/
 int requestForRead(uint8_t *buf, size_t bufSize, OVERLAPPED *osReader)
 {
     DWORD dwRead;
     size_t messSize = 0;
-    // Issue read operation.
     if (!ReadFile(hComm, buf, bufSize, &dwRead, osReader))
     {
-        if (GetLastError() != ERROR_IO_PENDING) // read not delayed?
+        if (GetLastError() != ERROR_IO_PENDING)
         {
-            // Error in communications; report it.
             serialErrorsHandler((void *)__func__);
         }
         else
@@ -78,6 +87,13 @@ int requestForRead(uint8_t *buf, size_t bufSize, OVERLAPPED *osReader)
     return SERIAL_DEFAULT;
 }
 
+/*!
+Функция ожидает ответ на запрос чтение данных.
+\param[out] buf буфер для получения считанных данных;
+\param[in] bufSize размер буфера для полученных данных;
+\param[in] osReader структура с параметрами настроенного события win OVERLAPPED;
+\return статус о необходимости ожидания данных;
+*/
 int waitAnswerRequestRead(uint8_t *buf, size_t bufSize, OVERLAPPED *osReader)
 {
     DWORD dwRes, dwRead;
@@ -86,30 +102,28 @@ int waitAnswerRequestRead(uint8_t *buf, size_t bufSize, OVERLAPPED *osReader)
     dwRes = WaitForSingleObject(osReader->hEvent, READ_TIMEOUT);
     switch (dwRes)
     {
-    // Read completed.
     case WAIT_OBJECT_0:
         if (!GetOverlappedResult(hComm, osReader, &dwRead, FALSE))
-        { // Error in communications; report it.
+        {
             serialErrorsHandler((void *)__func__);
         }
         else
-        { // Read completed successfully.
+        {
             if (dwRead)
             {
                 messSize = dwRead + 1;
                 param->rxHandler((void **)&buf, &messSize);
             }
             memset(buf, 0, bufSize);
-        } //  Reset flag so that another opertion can be issued.
+        }
         fWaitingOnRead = SERIAL_DEFAULT;
         break;
 
     case WAIT_TIMEOUT:
-        // Operation isn't complete yet. fWaitingOnRead flag isn't
-        // changed since I'll loop back around, and I don't want
-        // to issue another read until the first one finishes.
-        //
-        // This is a good time to do some background work.
+        /*!
+        TODO: необходимо дописать функцию для оценки времени на отправку.
+        при тестировании все данные отправлялись мгновенно.
+        */
         break;
 
     default:
@@ -119,30 +133,35 @@ int waitAnswerRequestRead(uint8_t *buf, size_t bufSize, OVERLAPPED *osReader)
 
     return fWaitingOnRead;
 }
-
-int requestForWrite(uint8_t *buf, size_t messSize, OVERLAPPED *osWrite)
+/*!
+Функция отправляет запрос на отправку данных в serial port.
+\param[in] buf буфер данных для отправки;
+\param[in] messSize размер данных для отправки;
+\param[in] osReader структура с параметрами настроенного события win OVERLAPPED;
+\return статус о необходимости ожидания данных.
+Если данные мгновенно не отправлены,
+вернёт статус о повторном периоде ожидания данных;
+*/
+int requestForWriteAndWait(uint8_t *buf, size_t messSize, OVERLAPPED *osWrite)
 {
     DWORD dwWritten;
     DWORD dwRes;
     BOOL fRes;
     size_t sizeAns = 0;
-    // Issue write.
+
     if (!WriteFile(hComm, buf, messSize, &dwWritten, osWrite))
     {
         if (GetLastError() != ERROR_IO_PENDING)
         {
-            // WriteFile failed, but isn't delayed. Report error and abort.
             serialErrorsHandler((void *)__func__);
             fRes = SERIAL_DEFAULT;
         }
         else
         {
-            // Write is pending.
             dwRes = WaitForSingleObject(osWrite->hEvent, INFINITE);
         }
         switch (dwRes)
         {
-        // OVERLAPPED structure's event has been signaled.
         case WAIT_OBJECT_0:
         {
             if (!GetOverlappedResult(hComm, osWrite, &dwWritten, FALSE))
@@ -160,9 +179,7 @@ int requestForWrite(uint8_t *buf, size_t messSize, OVERLAPPED *osWrite)
             break;
         }
         default:
-        { // An error has occurred in WaitForSingleObject.
-            // This usually indicates a problem with the
-            // OVERLAPPED structure's event handle.
+        {
             serialErrorsHandler((void *)__func__);
             fRes = SERIAL_DEFAULT;
             break;
@@ -180,9 +197,13 @@ int requestForWrite(uint8_t *buf, size_t messSize, OVERLAPPED *osWrite)
     }
     return fRes;
 }
-
+/*!
+Функция переключает режимы работы асинхронного автомата управления (SerialThread).
+\param[out] serialState статус работы автомата управления;
+*/
 void toggleSerialState(int *serialState)
 {
+    //TODO: необходимо переделать на отправку данных, при наличии этих данных в очереди;
     static int8_t count = 5;
 
     if (count > 0)
@@ -200,6 +221,10 @@ void toggleSerialState(int *serialState)
     }
 }
 
+/*!
+Функция-автомат управления режимами записи и чтения данных serial port
+\param[in] {serialParam_t*} args на вход принимает структуру с параметрами serial port
+*/
 void *SerialThread(void *args)
 {
     param = (serialParam_t *)args;
@@ -208,16 +233,13 @@ void *SerialThread(void *args)
         serialErrorsHandler((void *)__func__);
         return NULL;
     }
-    // int serialState = SERIAL_DEFAULT;
     int serialState = SERIAL_READ_REQUEST;
+
     OVERLAPPED osReader = {0};
     OVERLAPPED osWrite = {0};
-    // Create the overlapped event. Must be closed before exiting
-    // to avoid a handle leak.
     osReader.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
     osWrite.hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
     if ((osReader.hEvent == NULL) || (osWrite.hEvent == NULL))
-    // Error creating overlapped event; abort.
     {
         serialErrorsHandler((void *)__func__);
     }
@@ -238,11 +260,12 @@ void *SerialThread(void *args)
         }
         case SERIAL_WRITE_REQUEST:
         {
-            serialState = requestForWrite(txBuf, RX_TX_BUF_SIZE, &osWrite);
+            serialState = requestForWriteAndWait(txBuf, RX_TX_BUF_SIZE, &osWrite);
             break;
         }
         case SERIAL_FREE:
         {
+            //TODO: можно дабавить какой-нибудь обработчик
             break;
         }
         default:
@@ -268,23 +291,43 @@ void *SerialThread(void *args)
     return NULL;
 }
 
+/*!
+функция обработчик ошибок.
+__attribute__((weak)) - при наличии собственных обработчиков, можно переопределить данную функцию.
+\param[in] err принимает на вход макрос: __func__
+*/
 __attribute__((weak)) void serialErrorsHandler(void *err)
 {
     fprintf(stderr, "Err func::%s\n", (char *)err);
 }
-
+/*!
+функция обработчик приема сообщений.
+__attribute__((weak)) - при наличии собственных обработчиков, можно переопределить данную функцию.
+\param[out] mess принятое сообщение по Serial port
+\param[out] указатель на размер данных принятого сообщения
+*/
 __attribute__((weak)) void serialRXHandler(void **mess, size_t *messSize)
 {
     char *tmp = (char *)(*mess);
     fprintf(stderr, "mess size::%llu\nmess::%s\n", *messSize, tmp);
 }
-
+/*!
+функция обработчик отправки сообщений.
+__attribute__((weak)) - при наличии собственных обработчиков, можно переопределить данную функцию.
+\param[out] mess сообщение для отправки по Serial port, 
+при отсутствии данных mess может изменён на NULL
+\param[out] указатель на размер данных принятого сообщения
+*/
 __attribute__((weak)) void serialTXHandler(void **mess, size_t *messSize)
 {
     char *tmp = (char *)(*mess);
     fprintf(stderr, "mess size::%llu\nmess::%s\n", *messSize, tmp);
 }
-
+/*!
+функция команда для закрытия порта и удаления выделенной памяти.
+__attribute__((weak)) - при наличии собственных обработчиков, можно переопределить данную функцию.
+\return если true необходимо закрыть порт.
+*/
 __attribute__((weak)) int serialClose(void)
 {
     static uint8_t status = 100;
