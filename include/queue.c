@@ -1,23 +1,30 @@
 #include "headers/queue.h"
 
 /*internal functions--------------------*/
+
 int checkQueueHandelInMain(queueHandel_t *itemQhandel);
 void delAllQueueItems(queue_t **head);
-void addQueueItem(queue_t **head, void *data, size_t dataSize);
-
-void getQueueItem(queue_t **head, void **data, size_t *dataSize);
+void pushQueueItem(queue_t **head, void *data, size_t dataSize);
+void popQueueItem(queue_t **head, void **data, size_t *dataSize);
 queue_t *findPrevItem(queue_t *head, queue_t *item);
 queue_t *findLastItem(queue_t *head);
 /*end internal functions--------------------*/
 
+/*!
+\param[] mainQueueHandelList указатель на структуру обработчиков очереди;
+*/
 queueHandel_t *mainQueueHandelList = NULL;
 
+/*!
+Функция добавляет обработчик очереди для взаимодействия.
+\param[in] qHandel двойной указатель на обработчик.
+Данный указатель будет изменён, память будет выдулена из кучи.
+*/
 void AddQueueHandel(queueHandel_t **qHandel)
 {
     queueHandel_t *newItem = (queueHandel_t *)malloc(sizeof(queueHandel_t));
     newItem->handelID = (size_t)newItem;
     newItem->head = NULL;
-    newItem->tail = NULL;
     newItem->countItem = 0;
     newItem->totalSizeMem = 0;
     pthread_mutex_init(&newItem->mutex, NULL);
@@ -25,7 +32,9 @@ void AddQueueHandel(queueHandel_t **qHandel)
     *qHandel = newItem;
     mainQueueHandelList = newItem;
 }
-
+/*!
+Функция удаляет все обработчики очередей и освобождает память.
+*/
 void delAllQueueHandels(void)
 {
     if (mainQueueHandelList == NULL)
@@ -37,7 +46,6 @@ void delAllQueueHandels(void)
     {
         prev = mainQueueHandelList;
         mainQueueHandelList = mainQueueHandelList->next;
-        //        printf("del::%p\n", prev);
         delAllQueueItems(&prev->head);
         pthread_mutex_destroy(&prev->mutex);
         free(prev);
@@ -45,10 +53,13 @@ void delAllQueueHandels(void)
     delAllQueueItems(&mainQueueHandelList->head);
     pthread_mutex_destroy(&mainQueueHandelList->mutex);
     free(mainQueueHandelList);
-    //    printf("del::%p\n", mainQueueHandelList);
     mainQueueHandelList = NULL;
 }
-
+/*!
+Функция проверяет наличие обработчика в главном списке.
+\param[in] itemQhandel элемент который необходимо найти;
+\return true, если обработчик зарегистрирован в mainQueueHandelList;
+*/
 int checkQueueHandelInMain(queueHandel_t *itemQhandel)
 {
     queueHandel_t *head = mainQueueHandelList;
@@ -62,7 +73,12 @@ int checkQueueHandelInMain(queueHandel_t *itemQhandel)
     }
     return head == NULL ? 0 : 1;
 }
-
+/*!
+Функция удаляет полученный обработчик и освобождает память.
+\param[out] itemQhandel удаляет все элементы очереди указанного обработчика,
+освобождает всю память,
+изменяет указатель обработчика на NULL
+*/
 void delItemQueueHandel(queueHandel_t **itemQhandel)
 {
     queueHandel_t *head = mainQueueHandelList, *tmp = NULL;
@@ -93,17 +109,26 @@ void delItemQueueHandel(queueHandel_t **itemQhandel)
     }
     *itemQhandel = NULL;
 }
-
-void addQueueItem(queue_t **head, void *data, size_t dataSize)
+/*!
+Функция добавляет данные в список очереди.
+\param[in] head двойной указатель на вершину списка;
+\param[in] data указатель на данные;
+\param[in] dataSize размер данных;
+*/
+void pushQueueItem(queue_t **head, void *data, size_t dataSize)
 {
     queue_t *newItem = (queue_t *)malloc(sizeof(queue_t));
     newItem->data = data;
     newItem->size = dataSize;
     newItem->next = (*head);
     *head = newItem;
-    // printf("in queue::%p\t%p\n", newItem, newItem->data);
 }
 
+/*!
+Функция возвращает последний элемент списка.
+\param[in] head указатель на вершину списка;
+\return указатель на последний элемент списка
+*/
 queue_t *findLastItem(queue_t *head)
 {
     queue_t *last = head;
@@ -114,7 +139,12 @@ queue_t *findLastItem(queue_t *head)
     }
     return last;
 }
-
+/*!
+Функция возвращает предыдущий элемент очереди.
+\param[in] head указатель на вершину списка;
+\param[in] item указатель на элемент списка;
+\return указатель на предыдущий элемент
+*/
 queue_t *findPrevItem(queue_t *head, queue_t *item)
 {
     queue_t *prev = head;
@@ -129,8 +159,13 @@ queue_t *findPrevItem(queue_t *head, queue_t *item)
     }
     return prev;
 }
-
-void getQueueItem(queue_t **head, void **data, size_t *dataSize)
+/*!
+Функция забирает данные из очереди.
+\param[in] head двойной указатель на вершину списка;
+\param[out] data двойной указатель на данные, в случае ошибки изменит указатель на NULL;
+\param[out] dataSize размер данных;
+*/
+void popQueueItem(queue_t **head, void **data, size_t *dataSize)
 {
     if ((*head) == NULL)
     {
@@ -159,7 +194,10 @@ void getQueueItem(queue_t **head, void **data, size_t *dataSize)
     }
     free(tmp);
 }
-
+/*!
+Функция удаляет все элементы queue_t  из обработчика.
+\param[in] head двойной указатель на вершину списка;
+*/
 void delAllQueueItems(queue_t **head)
 {
     if ((*head) == NULL)
@@ -173,19 +211,22 @@ void delAllQueueItems(queue_t **head)
         (*head) = (*head)->next;
         if (prev->data != NULL)
         {
-            // printf("del data::0x%p\t0x%p\n", prev, prev->data);
             free(prev->data);
         }
         free(prev);
     }
     if ((*head)->data != NULL)
     {
-        // printf("del data::0x%p\t0x%p\n", (*head), (*head)->data);
         free((*head)->data);
     }
     free(*head);
 }
-
+/*!
+Функция для отправки в очередь сообщения, данные будут скопированы.
+\param[in] qHandel указатель на обработчик;
+\param[in] data указатель на данные для копирования;
+\param[in] dataSize размер данных;
+*/
 void sendQueue(queueHandel_t *qHandel, void *data, size_t dataSize)
 {
     if (qHandel == NULL)
@@ -195,12 +236,17 @@ void sendQueue(queueHandel_t *qHandel, void *data, size_t dataSize)
     pthread_mutex_lock(&qHandel->mutex);
     void *tmp = malloc(dataSize);
     memcpy(tmp, data, dataSize);
-    addQueueItem(&qHandel->head, tmp, dataSize);
+    pushQueueItem(&qHandel->head, tmp, dataSize);
     qHandel->countItem++;
     qHandel->totalSizeMem += dataSize;
     pthread_mutex_unlock(&qHandel->mutex);
 }
-
+/*!
+Функция для приёма сообщения из очереди, данные будут скопированы.
+\param[in] qHandel указатель на обработчик;
+\param[out] data двойной указатель на данные для копирования, при отсутствии данных, изменит указатель на NULL;
+\param[out] dataSize указатель на размер данных;
+*/
 void receivQueue(queueHandel_t *qHandel, void **dataNull, size_t *dataSize)
 {
     if (qHandel == NULL)
@@ -208,7 +254,7 @@ void receivQueue(queueHandel_t *qHandel, void **dataNull, size_t *dataSize)
         return;
     }
     pthread_mutex_lock(&qHandel->mutex);
-    getQueueItem(&qHandel->head, dataNull, dataSize);
+    popQueueItem(&qHandel->head, dataNull, dataSize);
     if (*dataNull != NULL)
     {
         qHandel->countItem--;
