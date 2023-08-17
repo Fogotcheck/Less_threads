@@ -29,22 +29,22 @@ int main(void)
         pthread_create(&id[i], &att, sendThread, q);
     }
     pthread_create(&id[2], &att, recievThread, q);
-    uint8_t *data = (uint8_t *)malloc(1024);
+    // uint8_t *data = (uint8_t *)malloc(1024);
 
-    size_t dataSize = 0;
-    for (size_t i = 0; i < 4; i++)
-    {
-        uint8_t *tmp = data;
-        while (tmp)
-        {
-            receivQueue(q[i], (void **)&tmp, &dataSize);
-            if (tmp)
-            {
-                printf("data[%llu]::%s\n", i, data);
-            }
-        }
-    }
-    free(data);
+    // size_t dataSize = 0;
+    // for (size_t i = 0; i < 4; i++)
+    // {
+    //     uint8_t *tmp = data;
+    //     while (tmp)
+    //     {
+    //         receivQueue(q[i], (void **)&tmp, &dataSize);
+    //         if (tmp)
+    //         {
+    //             printf("data[%llu]::%s\n", i, data);
+    //         }
+    //     }
+    // }
+    // free(data);
     // printf("q1::0x%p\nq2::0x%p\nq3::0x%p\nq4::0x%p\n", q_1, q_2, q_3, q_4);
     //    delItemQueueHandel(&q_1);
     // printf("q1::0x%p\nq2::0x%p\nq3::0x%p\nq4::0x%p\n", q_1, q_2, q_3, q_4);
