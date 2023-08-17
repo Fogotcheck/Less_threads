@@ -18,12 +18,12 @@ typedef struct queueHandel
 {
     size_t handelID;
     queue_t *head;
-    queue_t *tail;
     size_t totalSizeMem;
     size_t countItem;
     pthread_mutex_t mutex;
     struct queueHandel *next;
 } queueHandel_t;
+
 
 void AddQueueHandel(queueHandel_t **qHandel);
 void delAllQueueHandels(void);
