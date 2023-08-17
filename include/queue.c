@@ -39,9 +39,11 @@ void delAllQueueHandels(void)
         mainQueueHandelList = mainQueueHandelList->next;
         //        printf("del::%p\n", prev);
         delAllQueueItems(&prev->head);
+        pthread_mutex_destroy(&prev->mutex);
         free(prev);
     }
     delAllQueueItems(&mainQueueHandelList->head);
+    pthread_mutex_destroy(&mainQueueHandelList->mutex);
     free(mainQueueHandelList);
     //    printf("del::%p\n", mainQueueHandelList);
     mainQueueHandelList = NULL;
@@ -86,6 +88,7 @@ void delItemQueueHandel(queueHandel_t **itemQhandel)
             }
         }
         delAllQueueItems(&tmp->head);
+        pthread_mutex_destroy(&tmp->mutex);
         free(tmp);
     }
     *itemQhandel = NULL;
