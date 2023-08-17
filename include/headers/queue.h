@@ -1,7 +1,9 @@
 #ifndef __QUEUE_H__
 #define __QUEUE_H__
 #include <stdlib.h>
+#include <pthread.h>
 #include <stdio.h>
+#include <stdint.h>
 #include <string.h>
 
 #define START_SIZE_QUEUE_HANDELS 5
@@ -10,31 +12,23 @@ typedef struct queue
     void *data;
     size_t size;
     struct queue *next;
-    struct queue *prev;
 } queue_t;
 
 typedef struct queueHandel
 {
-    size_t countId;
+    size_t handelID;
     queue_t *head;
+    queue_t *tail;
+    size_t totalSizeMem;
     size_t countItem;
-}queueHandel_t;
+    pthread_mutex_t mutex;
+    struct queueHandel *next;
+} queueHandel_t;
 
-#define MOD_NAME                                                                                    \
-    {                                                                                               \
-        fprintf(stderr, "\n\t%s\nFunction name:\t%s\t\tLine:%d\n\n", __FILE__, __func__, __LINE__); \
-    }
-
-/**/
-void initQueueManagement(size_t countQueue);
-/*FILO*/
-void createQueue(queueHandel_t **xQueueHandel, void *data, size_t *size);
-/*FIFO*/
-void addItemQueue(queueHandel_t **xQueueHandel, void *data, size_t *size);
-/*get item and del head*/
-void getItemQueue(queueHandel_t *xQueueHandel, void **data, size_t *size);
+void AddQueueHandel(queueHandel_t **qHandel);
 void delAllQueueHandels(void);
+void delItemQueueHandel(queueHandel_t **itemQhandel);
+void sendQueue(queueHandel_t *qHandel, void *data, size_t dataSize);
+void receivQueue(queueHandel_t *qHandel, void **dataNull, size_t *dataSize);
 
-/*TODO:: this func for debug dell after tests*/
-void printAllQueueHandels(void);
 #endif //__QUEUE_H__
