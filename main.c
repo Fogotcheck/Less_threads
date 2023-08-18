@@ -1,37 +1,35 @@
 #include "include/headers/main.h"
+queueHandel_t *q[4];
+char myExit = 0;
+void serialTXHandler(void **mess, size_t *messSize);
+void serialRXHandler(void **mess, size_t *messSize);
+int closeSerial(void);
 
 int main(void)
 {
     // int ret = 0;
-    queueHandel_t *q[4];
+
     for (size_t i = 0; i < 4; i++)
     {
         q[i] = NULL;
         AddQueueHandel(&q[i]);
         printf("q[%llu]::%p\n", i, q[i]);
     }
-    char tq_1[] = "tq_1 hello main";
-    char tq_2[] = "tq_2 hello main";
-    char tq_3[] = "tq_3 hello main";
-    char tq_4[] = "tq_4 hello main";
-    for (size_t i = 0; i < 4; i++)
-    {
-        sendQueue(q[i], tq_1, sizeof(tq_1));
-        sendQueue(q[i], tq_2, sizeof(tq_2));
-        sendQueue(q[i], tq_3, sizeof(tq_3));
-        sendQueue(q[i], tq_4, sizeof(tq_4));
-    }
     pthread_t id[3];
     pthread_attr_t att;
     pthread_attr_init(&att);
-    for (size_t i = 0; i < 2; i++)
-    {
-        pthread_create(&id[i], &att, sendThread, q);
-    }
+
+    serialParam_t serialParam = {{"\\\\.\\COM24", {0}},
+                                 serialTXHandler,
+                                 serialRXHandler,
+                                 closeSerial};
+
+    pthread_create(&id[0], &att, SerialThread, &serialParam);
+
+    pthread_create(&id[1], &att, sendThread, q);
     pthread_create(&id[2], &att, recievThread, q);
     pthread_create(&id[3], &att, countThread, NULL);
-    
-    char myExit = 0;
+
     while (1)
     {
         scanf("%c", &myExit);
@@ -43,9 +41,25 @@ int main(void)
         }
     }
     uint8_t *res;
+    pthread_join(id[0], (void **)&res);
     pthread_join(id[2], (void **)&res);
     pthread_join(id[3], (void **)&res);
     delAllQueueHandels();
     printf("Hello world\n");
     return 0;
+}
+
+void serialRXHandler(void **mess, size_t *messSize)
+{
+    sendQueue(q[1], *mess, *messSize);
+}
+
+void serialTXHandler(void **mess, size_t *messSize)
+{
+    receivQueue(q[2], mess, messSize);
+}
+
+int closeSerial(void)
+{
+    return myExit == 0 ? 0 : 1;
 }

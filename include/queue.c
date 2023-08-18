@@ -188,6 +188,7 @@ void popQueueItem(queue_t **head, void **data, size_t *dataSize)
         tmp = last;
     }
     memcpy((*data), tmp->data, tmp->size);
+    *dataSize = tmp->size;
     if (tmp->data)
     {
         free(tmp->data);
