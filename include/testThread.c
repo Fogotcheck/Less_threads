@@ -4,10 +4,6 @@ void *sendThread(void *args)
 {
     pthread_t id = pthread_self();
     queueHandel_t **q = (queueHandel_t **)args;
-    // for (size_t i = 0; i < 4; i++)
-    // {
-    //     printf("id::%llu\tq[%llu]::%p\n", id, i, q[i]);
-    // }
 
     int ret = 0;
     struct timespec ts = {0, 0};
@@ -19,7 +15,7 @@ void *sendThread(void *args)
     for (size_t i = 0; i < 10; i++)
     {
         buf[len] = i + '0';
-        sendQueue(q[1], buf, sizeof(buf));
+        sendQueue(q[2], buf, sizeof(buf));
         pthread_testcancel();
         ret = pthread_delay_np(&ts);
         if (ret)
@@ -33,26 +29,33 @@ void *sendThread(void *args)
 
 void *recievThread(void *args)
 {
-    pthread_t id = pthread_self();
+    // pthread_t id = pthread_self();
     queueHandel_t **q = (queueHandel_t **)args;
-    // for (size_t i = 0; i < 4; i++)
-    // {
-    //     printf("id::%llu\tq[%llu]::%p\n", id, i, q[i]);
-    // }
     char *buf = (char *)malloc(1024);
     size_t dataSize = 0;
     while (1)
     {
-        for (size_t i = 0; i < 4; i++)
+        char *tmp = buf;
+        while (tmp)
         {
-            char *tmp = buf;
-            while (tmp)
+            receivQueue(q[1], (void **)&tmp, &dataSize);
+            if (tmp)
             {
-                receivQueue(q[i], (void **)&tmp, &dataSize);
-                if (tmp)
+                printf("rec::\t");
+                for (size_t i = 0; i < dataSize; i++)
                 {
-                    printf("th::%llu\trec::q[%llu]::%s\n", id, i, buf);
+                    if (buf[i] == '\r')
+                    {
+                        break;
+                    }
+                    printf("%c", buf[i]);
                 }
+                printf("\t\t");
+                for (size_t i = 0; i < dataSize; i++)
+                {
+                    printf("0x%x ", (uint8_t)buf[i]);
+                }
+                printf("\tsize::%llu\n", dataSize);
             }
         }
         pthread_testcancel();
