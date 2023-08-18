@@ -278,10 +278,11 @@ void *SerialThread(void *args)
             break;
         }
         }
+        
         if ((serialState == SERIAL_DEFAULT) &&
             (param->seraialClose()))
         {
-            serialErrorsHandler("serial close Handel::OK\n");
+            //serialErrorsHandler("serial close Handel::OK\n");
             break;
         }
     }

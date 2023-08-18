@@ -23,7 +23,7 @@ int main(void)
                                  serialTXHandler,
                                  serialRXHandler,
                                  closeSerial};
-                                 
+
     pthread_create(&id[0], &att, SerialThread, &serialParam);
 
     pthread_create(&id[1], &att, sendThread, q);
@@ -41,6 +41,7 @@ int main(void)
         }
     }
     uint8_t *res;
+    pthread_join(id[0], (void **)&res);
     pthread_join(id[2], (void **)&res);
     pthread_join(id[3], (void **)&res);
     delAllQueueHandels();
