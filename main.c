@@ -19,7 +19,11 @@ int main(void)
     pthread_attr_t att;
     pthread_attr_init(&att);
 
-    serialParam_t serialParam = {"\\\\.\\COM24", serialTXHandler, serialRXHandler, closeSerial};
+    serialParam_t serialParam = {{"\\\\.\\COM24", {0}},
+                                 serialTXHandler,
+                                 serialRXHandler,
+                                 closeSerial};
+                                 
     pthread_create(&id[0], &att, SerialThread, &serialParam);
 
     pthread_create(&id[1], &att, sendThread, q);

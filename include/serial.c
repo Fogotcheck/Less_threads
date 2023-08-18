@@ -8,6 +8,7 @@ int requestForRead(uint8_t *buf, size_t bufSize, OVERLAPPED *osReader);
 int requestForWriteAndWait(uint8_t *buf, size_t messSize, OVERLAPPED *osWrite);
 void toggleSerialState(int *serialState);
 
+void PrintCommState(DCB dcb);
 void serialRXHandler(void **mess, size_t *messSize);
 void serialTXHandler(void **mess, size_t *messSize);
 int serialClose(void);
@@ -23,8 +24,9 @@ size_t messSizeTX = 0;
 */
 int openAndSettingSerial(void)
 {
+
     // TODO: добавить настройку скорости порта.
-    hComm = CreateFile(param->portName,
+    hComm = CreateFile(param->portSettings.portName,
                        GENERIC_READ | GENERIC_WRITE,
                        0,
                        0,
@@ -51,6 +53,18 @@ int openAndSettingSerial(void)
 
     rxBuf = (uint8_t *)malloc(RX_TX_BUF_SIZE);
     txBuf = (uint8_t *)malloc(RX_TX_BUF_SIZE);
+
+    SetCommMask(hComm, EV_DSR | EV_CTS);
+
+    if (param->portSettings.dcb.BaudRate == 0)
+    {
+        param->portSettings.dcb.BaudRate = CBR_115200;   //  baud rate
+        param->portSettings.dcb.ByteSize = 8;            //  data size, xmit and rcv
+        param->portSettings.dcb.Parity = NOPARITY;       //  parity bit
+        param->portSettings.dcb.StopBits = ONE5STOPBITS; //  stop bit
+    }
+    SetCommState(hComm, &param->portSettings.dcb);
+
     return 0;
 }
 /*!
@@ -169,7 +183,7 @@ int requestForWriteAndWait(uint8_t *buf, size_t messSize, OVERLAPPED *osWrite)
             }
             else
             {
-                printf("i send in wait\n");
+                // printf("i send in wait\n");
                 memset(txBuf, 0, RX_TX_BUF_SIZE);
                 fRes = SERIAL_DEFAULT;
             }
@@ -185,7 +199,7 @@ int requestForWriteAndWait(uint8_t *buf, size_t messSize, OVERLAPPED *osWrite)
     }
     else
     {
-        printf("i send imm\n");
+        // printf("i send imm\n");
         memset(txBuf, 0, RX_TX_BUF_SIZE);
         fRes = SERIAL_DEFAULT;
     }
@@ -322,4 +336,14 @@ __attribute__((weak)) int serialClose(void)
     static uint8_t status = 100;
     status--;
     return status > 0 ? 0 : 1;
+}
+
+void PrintCommState(DCB dcb)
+{
+    //  Print some of the DCB structure values
+    printf("\nBaudRate = %ld, ByteSize = %d, Parity = %d, StopBits = %d\n",
+           dcb.BaudRate,
+           dcb.ByteSize,
+           dcb.Parity,
+           dcb.StopBits);
 }

@@ -8,14 +8,20 @@
 #include <string.h>
 #include <pthread.h>
 
-
 #define RX_TX_BUF_SIZE 1024
 
 typedef void (*funcHandler)(void **mess, size_t *messSize);
 typedef int (*funcCloseSerial)(void);
-typedef struct serialParam
+
+typedef struct portParam
 {
     char *portName;
+    DCB dcb;
+} portParam_t;
+
+typedef struct serialParam
+{
+    portParam_t portSettings;
     funcHandler txHandler;
     funcHandler rxHandler;
     funcCloseSerial seraialClose;
