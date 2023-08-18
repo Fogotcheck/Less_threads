@@ -29,7 +29,7 @@ void *sendThread(void *args)
 
 void *recievThread(void *args)
 {
-    pthread_t id = pthread_self();
+    // pthread_t id = pthread_self();
     queueHandel_t **q = (queueHandel_t **)args;
     char *buf = (char *)malloc(1024);
     size_t dataSize = 0;
@@ -41,10 +41,23 @@ void *recievThread(void *args)
             receivQueue(q[1], (void **)&tmp, &dataSize);
             if (tmp)
             {
-                printf("th::%llu\trec::q[1]::%s\n", id, buf);
+                printf("rec::\t");
+                for (size_t i = 0; i < dataSize; i++)
+                {
+                    if (buf[i] == '\r')
+                    {
+                        break;
+                    }
+                    printf("%c", buf[i]);
+                }
+                printf("\t\t");
+                for (size_t i = 0; i < dataSize; i++)
+                {
+                    printf("0x%x ", (uint8_t)buf[i]);
+                }
+                printf("\tsize::%llu\n", dataSize);
             }
         }
-
         pthread_testcancel();
     }
     return NULL;
