@@ -16,7 +16,7 @@ serialParam_t *param;
 
 uint8_t *rxBuf;
 uint8_t *txBuf;
-
+size_t messSizeTX = 0;
 /*!
 Функция открывает serial port, и выделяет память для буферов.
 \return NULL при успешном открытии порта
@@ -147,7 +147,6 @@ int requestForWriteAndWait(uint8_t *buf, size_t messSize, OVERLAPPED *osWrite)
     DWORD dwWritten;
     DWORD dwRes;
     BOOL fRes;
-    size_t sizeAns = 0;
 
     if (!WriteFile(hComm, buf, messSize, &dwWritten, osWrite))
     {
@@ -170,9 +169,7 @@ int requestForWriteAndWait(uint8_t *buf, size_t messSize, OVERLAPPED *osWrite)
             }
             else
             {
-                strcat((char *)txBuf, " Write operation completed successfully.\n\0");
-                sizeAns = strlen((char *)txBuf);
-                param->txHandler((void **)&txBuf, &sizeAns);
+                printf("i send in wait\n");
                 memset(txBuf, 0, RX_TX_BUF_SIZE);
                 fRes = SERIAL_DEFAULT;
             }
@@ -188,10 +185,7 @@ int requestForWriteAndWait(uint8_t *buf, size_t messSize, OVERLAPPED *osWrite)
     }
     else
     {
-        txBuf[0] = 0;
-        strcat((char *)txBuf, " WriteFile completed immediately..\n\0");
-        sizeAns = messSize;
-        param->txHandler((void **)&txBuf, &sizeAns);
+        printf("i send imm\n");
         memset(txBuf, 0, RX_TX_BUF_SIZE);
         fRes = SERIAL_DEFAULT;
     }
@@ -203,21 +197,16 @@ int requestForWriteAndWait(uint8_t *buf, size_t messSize, OVERLAPPED *osWrite)
 */
 void toggleSerialState(int *serialState)
 {
-    //TODO: необходимо переделать на отправку данных, при наличии этих данных в очереди;
-    static int8_t count = 5;
-
-    if (count > 0)
+    // TODO: необходимо переделать на отправку данных, при наличии этих данных в очереди;
+    uint8_t *tmp = txBuf;
+    param->txHandler((void **)&tmp, &messSizeTX);
+    if (tmp)
     {
         *serialState = SERIAL_WRITE_REQUEST;
     }
     else
     {
         *serialState = SERIAL_READ_REQUEST;
-    }
-    count--;
-    if (count <= -5)
-    {
-        count = 5;
     }
 }
 
@@ -260,12 +249,12 @@ void *SerialThread(void *args)
         }
         case SERIAL_WRITE_REQUEST:
         {
-            serialState = requestForWriteAndWait(txBuf, RX_TX_BUF_SIZE, &osWrite);
+            serialState = requestForWriteAndWait(txBuf, messSizeTX, &osWrite);
             break;
         }
         case SERIAL_FREE:
         {
-            //TODO: можно дабавить какой-нибудь обработчик
+            // TODO: можно дабавить какой-нибудь обработчик
             break;
         }
         default:
@@ -314,7 +303,7 @@ __attribute__((weak)) void serialRXHandler(void **mess, size_t *messSize)
 /*!
 функция обработчик отправки сообщений.
 __attribute__((weak)) - при наличии собственных обработчиков, можно переопределить данную функцию.
-\param[out] mess сообщение для отправки по Serial port, 
+\param[out] mess сообщение для отправки по Serial port,
 при отсутствии данных mess может изменён на NULL
 \param[out] указатель на размер данных принятого сообщения
 */
