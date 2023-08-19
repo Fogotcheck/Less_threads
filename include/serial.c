@@ -54,6 +54,10 @@ int openAndSettingSerial(void)
     rxBuf = (uint8_t *)malloc(RX_TX_BUF_SIZE);
     txBuf = (uint8_t *)malloc(RX_TX_BUF_SIZE);
 
+    DWORD tmpMask = 0;
+    DCB tmpDCB = {0};
+    GetCommMask(hComm, &tmpMask);
+    GetCommState(hComm, &tmpDCB);
     SetCommMask(hComm, EV_DSR | EV_CTS);
 
     if (param->portSettings.dcb.BaudRate == 0)
@@ -278,11 +282,11 @@ void *SerialThread(void *args)
             break;
         }
         }
-        
+
         if ((serialState == SERIAL_DEFAULT) &&
             (param->seraialClose()))
         {
-            //serialErrorsHandler("serial close Handel::OK\n");
+            // serialErrorsHandler("serial close Handel::OK\n");
             break;
         }
     }

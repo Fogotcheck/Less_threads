@@ -1,4 +1,4 @@
-#include "headers/testThread.h"
+#include "headers/workThread.h"
 
 void *sendThread(void *args)
 {

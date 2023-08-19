@@ -13,3 +13,5 @@ tmp/serial.o
 build/Threads.exe
 build/Threads.lss
 build/Threads.sym
+tmp/arguments.o
+tmp/workThread.o

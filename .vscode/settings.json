@@ -4,7 +4,8 @@
         "MakeFile": "makefile",
         "main_config.h": "c",
         "cmath": "c",
-        "limits": "c"
+        "limits": "c",
+        "testthread.h": "c"
     },
     "idf.customExtraVars": {
         "OPENOCD_SCRIPTS": "C:\\Users\\win10\\.espressif\\tools\\openocd-esp32\\v0.11.0-esp32-20221026/openocd-esp32/share/openocd/scripts",

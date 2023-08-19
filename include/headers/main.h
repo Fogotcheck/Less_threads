@@ -4,5 +4,6 @@
 #include <pthread.h>
 #include "serial.h"
 #include "queue.h"
-#include "testThread.h"
+#include "workThread.h"
+#include "arguments.h"
 #endif //__MAIN_H__
