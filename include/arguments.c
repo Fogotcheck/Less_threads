@@ -2,6 +2,7 @@
 
 /*intern prot---------------------------------*/
 void fileExePassHandler(char *exePassAndName);
+void printKeyInfo(void);
 /*end intern prot-----------------------------*/
 
 /*Callback------------------------------------*/
@@ -40,6 +41,13 @@ void fileExePassHandler(char *exePassAndName)
     exePass.fileExePass[exePass.sizeExePass + 1] = 0;
 }
 
+void printKeyInfo(void)
+{
+    printf("'-h' - help\n'-b' - set Baud Rate \
+    \n'-s' - set Byte Size\n'-p' - set Parity \
+    \n'-e' - set End Bits\n'-N' - set Port Name\n");
+}
+
 void argumentsHandler(int argc, char *argv[])
 {
 
@@ -52,6 +60,7 @@ void argumentsHandler(int argc, char *argv[])
         case 'h':
         {
             printf("https://github.com/Fogotcheck/Less_threads.git - check read.me\n");
+            printKeyInfo();
             break;
         }
         case 'f':
