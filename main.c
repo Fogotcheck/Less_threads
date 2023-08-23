@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
         scanf("%c", &myExit);
         if (myExit == 'q')
         {
-            pthread_cancel(id[3]);
+           // pthread_cancel(id[3]);
             pthread_cancel(id[2]);
             break;
         }
